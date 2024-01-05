@@ -1,0 +1,4 @@
+(executables
+ (public_names ads_ocaml)
+ (names main)
+ (libraries ads_ocaml))

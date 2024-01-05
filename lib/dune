@@ -1,0 +1,10 @@
+(library
+ (name ads_ocaml)
+ (libraries)
+ (preprocess
+  (pps ppx_deriving.show)))
+
+(env
+ (dev
+  (flags
+   (:standard -warn-error -A))))
