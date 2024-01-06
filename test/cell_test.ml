@@ -1,19 +1,29 @@
 open Ads_ocaml.Cell
 
-let int_array_cell =
-  let pp_int_cell ppf x = Fmt.(pf ppf "%a" (ArrayCell.pp int)) x in
-  Alcotest.testable pp_int_cell ( = )
-;;
-
 let test_make () =
-  Alcotest.(check int_array_cell) "make cell" (ArrayCell.make 1) (ArrayCell.make 1)
+  Alcotest.(check string)
+    "should make cell"
+    "[|1|]"
+    (ArrayCell.show Fmt.int @@ ArrayCell.make 1)
 ;;
 
-let () =
-  Alcotest.run "ArrayCell"
-    [
-      ( "make",
-        [
-          Alcotest.test_case "should make cell" `Quick test_make;
-        ] );
-    ]
+let test_get () =
+  Alcotest.(check int) "should get cell value" 1 (ArrayCell.make 1 |> ArrayCell.get)
+;;
+
+let test_set () =
+  Alcotest.(check string)
+    "should set cell value"
+    "[|3|]"
+    (ArrayCell.make 1
+     |> fun cell ->
+     ArrayCell.set cell 3;
+     cell |> ArrayCell.show Fmt.int)
+;;
+
+let suite =
+  [ "ArrayCell.make", `Quick, test_make
+  ; "ArrayCell.get", `Quick, test_get
+  ; "ArrayCell.set", `Quick, test_set
+  ]
+;;

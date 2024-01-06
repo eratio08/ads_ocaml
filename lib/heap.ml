@@ -11,9 +11,11 @@ module type Heap = sig
 end
 
 module LeftistHeap (E : Ord.Ord) = struct
+  type e = E.t
+
   type t =
     | Empty
-    | Cons of int * E.t * t * t
+    | Cons of int * e * t * t
 
   let empty = Empty
 
@@ -31,6 +33,7 @@ module LeftistHeap (E : Ord.Ord) = struct
     let rank_l = rank l in
     let rank_r = rank r in
     match rank_l >= rank_r with
+    (* the largest heap goes left*)
     | true -> Cons (rank_r + 1, x, l, r)
     | false -> Cons (rank_l + 1, x, r, l)
   ;;
@@ -39,6 +42,7 @@ module LeftistHeap (E : Ord.Ord) = struct
     match t1, t2 with
     | t1, Empty -> t1
     | Empty, t2 -> t2
+    (* merges are always on the right, as the left is always saturated *)
     | Cons (_, x, l1, r1), (Cons (_, y, _, _) as t2) when x <= y ->
       make_cons x l1 (merge r1 t2)
     | t1, Cons (_, y, l2, r2) -> make_cons y l2 (merge t1 r2)
@@ -49,5 +53,10 @@ module LeftistHeap (E : Ord.Ord) = struct
   let find_min = function
     | Empty -> failwith "empty"
     | Cons (_, x, _, _) -> x
+  ;;
+
+  let delete_min = function
+    | Empty -> Empty
+    | Cons (_, _, l, r) -> merge l r
   ;;
 end
