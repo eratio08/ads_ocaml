@@ -5,14 +5,16 @@ Implementing Algorithms and Data Structures in OCaml for learning.
 
 ## 🗄️ Data Structures
 
-* Cell, *mutable*
-* Heap, *as LeftistHeap*
-* *todo*
+* Stack | *List*, *ADT*
+* Set | *UnbalancedTreeSet*
+* Map | *UnbalancedTreeMap*
+* Heap | *LeftistHeap*, *BinomialHeap*
+* *...todo*
 
 
 ## 🔢 Algorithms
 
-* *todo*
+* *...todo*
 
 
 ## 📚 References

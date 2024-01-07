@@ -1,6 +1,6 @@
 (library
  (name ads_ocaml)
- (libraries)
+ (libraries fmt)
  (preprocess
   (pps ppx_deriving.show)))
 
