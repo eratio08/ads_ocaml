@@ -9,6 +9,7 @@ Implementing Algorithms and Data Structures in OCaml for learning.
 * Set | *UnbalancedTreeSet*
 * Map | *UnbalancedTreeMap*
 * Heap | *LeftistHeap*, *BinomialHeap*
+* Queue | *FiFOQueue*, *Dequeue*
 * *...todo*
 
 

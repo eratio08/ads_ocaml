@@ -5,5 +5,6 @@ let () =
     ; "Heap", Heap_test.suite
     ; "Set", Set_test.suite
     ; "Stream", Stream_test.suite
+    ; "Queue", Queue_test.suite
     ]
 ;;
