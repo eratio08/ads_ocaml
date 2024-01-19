@@ -133,3 +133,97 @@ module BinomialHeap (E : Ord.Ord) = struct
     merge ns1 ns2
   ;;
 end
+
+module SplayHeap (Elem : Ord.Ord) = struct
+  type e = Elem.t
+
+  type t =
+    | Empty
+    | Tree of t * e * t
+
+  let empty = Empty
+
+  let is_empty = function
+    | Empty -> true
+    | _ -> false
+  ;;
+
+  (* filter out all elements smaller or equal than pivot, keep only bigger *)
+  let rec bigger pivot = function
+    | Empty -> Empty
+    | Tree (_, x, b) when x <= pivot -> bigger pivot b
+    | Tree (a, x, b) ->
+      (match a with
+       | Empty -> Tree (Empty, x, b)
+       | Tree (a1, y, _) when y <= pivot -> Tree (bigger pivot a1, x, b)
+       (* rotate if gone left twice *)
+       | Tree (a1, y, a2) -> Tree (bigger pivot a1, y, Tree (a2, x, b)))
+  ;;
+
+  (* filter out all bigger elements, keep only smaller or equal *)
+  let rec smaller pivot = function
+    | Empty -> Empty
+    | Tree (a, x, _) when x > pivot -> smaller pivot a
+    | Tree (a, x, b) ->
+      (match b with
+       | Empty -> Tree (a, x, Empty)
+       | Tree (_, y, b2) when y > pivot -> Tree (a, x, smaller x b2)
+       | Tree (b1, y, b2) -> Tree (Tree (b1, x, a), y, smaller pivot b2))
+  ;;
+
+  (* return a pair of trees so that fst has only smaller or equal and snd bigger elements *)
+  let rec partition pivot = function
+    | Empty -> Empty, Empty
+    | Tree (a, x, b) as t when x <= pivot ->
+      (match b with
+       | Empty -> t, Empty
+       (* x <= y <= pivot *)
+       | Tree (b1, y, b2) when y <= pivot ->
+         let small, big = partition pivot b2 in
+         Tree (Tree (a, x, b1), y, small), big
+       (* x <= pivot < y *)
+       | Tree (b1, y, b2) ->
+         let small, big = partition pivot b1 in
+         Tree (a, x, small), Tree (big, y, b2))
+    (* pivot < x *)
+    | Tree (a, x, b) as t ->
+      (match a with
+       | Empty -> Empty, t
+       (* y <= pivot < x *)
+       | Tree (a1, y, a2) when y <= pivot ->
+         let small, big = partition pivot a2 in
+         Tree (a1, y, small), Tree (big, x, b)
+       (* pivot < y < x *)
+       | Tree (a1, y, a2) ->
+         let small, big = partition pivot a1 in
+         small, Tree (big, y, Tree (a2, x, b)))
+  ;;
+
+  let insert' x t = Tree (smaller x t, x, bigger x t)
+
+  let insert x t =
+    let small, big = partition x t in
+    Tree (small, x, big)
+  ;;
+
+  let rec find_min = function
+    | Empty -> failwith "empty"
+    | Tree (Empty, x, _) -> x
+    | Tree (a, _, _) -> find_min a
+  ;;
+
+  let rec delete_min = function
+    | Empty -> failwith "empty"
+    | Tree (Empty, _, b) -> b
+    | Tree (Tree (Empty, _, b), y, c) -> Tree (b, y, c)
+    | Tree (Tree (a, x, b), y, c) -> Tree (delete_min a, x, Tree (b, y, c))
+  ;;
+
+  let rec merge t1 t2 =
+    match t1, t2 with
+    | Empty, t -> t
+    | Tree (a, x, b), t ->
+      let small, big = partition x t in
+      Tree (merge small a, x, merge big b)
+  ;;
+end

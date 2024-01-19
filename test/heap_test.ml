@@ -1,12 +1,12 @@
 open Ads_ocaml.Heap
 
+module OrdInt = struct
+  include Ads_ocaml.Ord.Ord (Int)
+
+  let pp fmt t = Format.fprintf fmt "%d" t
+end
+
 module IntLeftistHeap = struct
-  module OrdInt = struct
-    include Ads_ocaml.Ord.Ord (Int)
-
-    let pp fmt t = Format.fprintf fmt "%d" t
-  end
-
   include LeftistHeap (OrdInt)
 
   let rec pp p = function
@@ -159,6 +159,79 @@ let test_find_min_binomial () =
        ])
 ;;
 
+module IntSplayHeap = struct
+  include Ads_ocaml.Heap.SplayHeap (OrdInt)
+
+  let rec pp fmt = function
+    | Empty -> Format.fprintf fmt "Empty"
+    | Tree (a, x, b) ->
+      Format.fprintf
+        fmt
+        "Tree (%a, %a, %a)"
+        (fun fmt -> pp fmt)
+        a
+        OrdInt.pp
+        x
+        (fun fmt -> pp fmt)
+        b
+  ;;
+end
+
+let splayheap = Alcotest.testable IntSplayHeap.pp ( = )
+
+let test_insert_splay () =
+  let open IntSplayHeap in
+  Alcotest.(check splayheap) "insert empty" (Tree (empty, 1, empty)) (insert 1 empty);
+  Alcotest.(check splayheap)
+    "insert non-empty"
+    (Tree (Tree (Tree (Tree (Empty, 1, Empty), 2, Empty), 3, Empty), 4, Empty))
+    (insert 1 empty |> insert 2 |> insert 3 |> insert 4);
+  Alcotest.(check splayheap)
+    "insert non-empty"
+    (Tree
+       ( Tree (Empty, 1, Empty)
+       , 1
+       , Tree (Tree (Empty, 2, Empty), 3, Tree (Empty, 4, Empty)) ))
+    (insert 1 (Tree (Tree (Tree (Tree (Empty, 1, Empty), 2, Empty), 3, Empty), 4, Empty)));
+  Alcotest.(check splayheap) "insert' empty" (Tree (empty, 1, empty)) (insert' 1 empty);
+  Alcotest.(check splayheap)
+    "insert' non-empty"
+    (Tree (Tree (Tree (Tree (Empty, 1, Empty), 2, Empty), 3, Empty), 4, Empty))
+    (insert' 1 empty |> insert' 2 |> insert' 3 |> insert' 4);
+  Alcotest.(check splayheap)
+    "insert' non-empty"
+    (Tree
+       ( Tree (Empty, 1, Empty)
+       , 1
+       , Tree (Tree (Empty, 2, Empty), 3, Tree (Empty, 4, Empty)) ))
+    (insert'
+       1
+       (Tree (Tree (Tree (Tree (Empty, 1, Empty), 2, Empty), 3, Empty), 4, Empty)))
+;;
+
+let test_find_min_splay () =
+  let open IntSplayHeap in
+  Alcotest.check_raises "find_min empty" (Failure "empty") (fun () ->
+    let _ = find_min empty in
+    ());
+  Alcotest.(check int) "find_min non-empty" 1 (find_min (insert 1 empty));
+  Alcotest.(check int)
+    "find_min non-empty"
+    1
+    (find_min (insert 1 empty |> insert 3 |> insert 2))
+;;
+
+let test_delete_min_splay () =
+  let open IntSplayHeap in
+  Alcotest.check_raises "delete_min empty" (Failure "empty") (fun () ->
+    let _ = delete_min empty in
+    ());
+  Alcotest.(check splayheap)
+    "delete min non-empty"
+    (Tree (Empty, 2, Empty))
+    (delete_min (insert 1 empty |> insert 2))
+;;
+
 let suite =
   [ "LeftistHeap.merge", `Quick, test_merge
   ; "LeftistHeap.insert", `Quick, test_insert
@@ -166,5 +239,8 @@ let suite =
   ; "BinomialHeap.merge", `Quick, test_merge_binomial
   ; "BinomialHeap.insert", `Quick, test_insert_binomial
   ; "BinomialHeap.find_min", `Quick, test_find_min_binomial
+  ; "SplayHeap.insert", `Quick, test_insert_splay
+  ; "SplayHeap.find_min", `Quick, test_find_min_splay
+  ; "SplayHeap.delete_min", `Quick, test_delete_min_splay
   ]
 ;;
