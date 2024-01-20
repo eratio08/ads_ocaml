@@ -1,3 +1,8 @@
 (tests
  (names test)
  (libraries alcotest ads_ocaml))
+
+(env
+ (dev
+  (flags
+   (:standard -warn-error -A))))

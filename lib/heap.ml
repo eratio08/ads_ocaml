@@ -134,6 +134,48 @@ module BinomialHeap (E : Ord.Ord) = struct
   ;;
 end
 
+module ExplicitMin (H : Heap) = struct
+  type e = H.e
+
+  type t =
+    | E
+    | NE of e * H.t
+
+  let empty = E
+
+  let is_empty = function
+    | E -> true
+    | _ -> false
+  ;;
+
+  let insert x = function
+    | E -> NE (x, H.empty)
+    | NE (min, h) when x < min -> NE (x, H.insert x h)
+    | NE (_, h) -> NE (x, H.insert x h)
+  ;;
+
+  let merge t1 t2 =
+    match t1, t2 with
+    | E, E -> E
+    | t, E | E, t -> t
+    | NE (x, t1), NE (y, t2) when x <= y -> NE (x, H.merge t1 t2)
+    | NE (_, t1), NE (y, t2) -> NE (y, H.merge t1 t2)
+  ;;
+
+  let find_min = function
+    | E -> failwith "empty"
+    | NE (min, _) -> min
+  ;;
+
+  let delete_min = function
+    | E -> failwith "empty"
+    | NE (_, t) ->
+      let t = H.delete_min t in
+      let x = H.find_min t in
+      NE (x, t)
+  ;;
+end
+
 module SplayHeap (Elem : Ord.Ord) = struct
   type e = Elem.t
 

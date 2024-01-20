@@ -212,8 +212,7 @@ let test_insert_splay () =
 let test_find_min_splay () =
   let open IntSplayHeap in
   Alcotest.check_raises "find_min empty" (Failure "empty") (fun () ->
-    let _ = find_min empty in
-    ());
+    find_min empty |> ignore);
   Alcotest.(check int) "find_min non-empty" 1 (find_min (insert 1 empty));
   Alcotest.(check int)
     "find_min non-empty"
@@ -224,12 +223,39 @@ let test_find_min_splay () =
 let test_delete_min_splay () =
   let open IntSplayHeap in
   Alcotest.check_raises "delete_min empty" (Failure "empty") (fun () ->
-    let _ = delete_min empty in
-    ());
+    delete_min empty |> ignore);
   Alcotest.(check splayheap)
     "delete min non-empty"
     (Tree (Empty, 2, Empty))
     (delete_min (insert 1 empty |> insert 2))
+;;
+
+module ExplicitMinIntSplayHeap = struct
+  include ExplicitMin (IntSplayHeap)
+
+  let pp fmt = function
+    | E -> Format.fprintf fmt "E"
+    | NE (x, t) -> Format.fprintf fmt "NE (%d, %a)" x IntSplayHeap.pp t
+  ;;
+end
+
+let explicit_splayheap = Alcotest.testable ExplicitMinIntSplayHeap.pp ( = )
+
+let test_find_min_explicit () =
+  let open ExplicitMinIntSplayHeap in
+  Alcotest.check_raises "find_min empty" (Failure "empty") (fun () ->
+    find_min empty |> ignore)
+;;
+
+let test_delete_min_explicit () =
+  let open ExplicitMinIntSplayHeap in
+  Alcotest.check_raises "delete_min empty" (Failure "empty") (fun () ->
+    delete_min empty |> ignore);
+  Alcotest.(check explicit_splayheap)
+    "delete_min non-empty"
+    (NE (2, IntSplayHeap.Tree (IntSplayHeap.Empty, 2, IntSplayHeap.Empty)))
+    (delete_min
+       (NE (1, IntSplayHeap.insert 2 IntSplayHeap.empty |> IntSplayHeap.insert 2)))
 ;;
 
 let suite =
@@ -242,5 +268,7 @@ let suite =
   ; "SplayHeap.insert", `Quick, test_insert_splay
   ; "SplayHeap.find_min", `Quick, test_find_min_splay
   ; "SplayHeap.delete_min", `Quick, test_delete_min_splay
+  ; "ExplicitSplayHeap.find_min", `Quick, test_find_min_explicit
+  ; "ExplicitSplayHeap.delete_min", `Quick, test_delete_min_explicit
   ]
 ;;
