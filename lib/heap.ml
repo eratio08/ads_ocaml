@@ -269,3 +269,47 @@ module SplayHeap (Elem : Ord.Ord) = struct
       Tree (merge small a, x, merge big b)
   ;;
 end
+
+module PairingHeap (Elem : Ord.Ord) = struct
+  type e = Elem.t
+
+  type t =
+    | E
+    | T of e * t list
+
+  let empty = E
+
+  let is_empty = function
+    | E -> true
+    | _ -> false
+  ;;
+
+  let find_min = function
+    | E -> failwith "empty"
+    | T (x, _) -> x
+  ;;
+
+  (* merge makes the tree with the larger root the leftmost child of the tree with the smaller root *)
+  let merge t1 t2 =
+    match t1, t2 with
+    | E, h | h, E -> h
+    | T (x, hs1), (T (y, _) as h2) when x <= y -> T (x, h2 :: hs1)
+    (* x > y *)
+    | h1, T (y, hs2) -> T (y, h1 :: hs2)
+  ;;
+
+  let insert x t = merge (T (x, [])) t
+
+  (* merges children in pairs from left to right then merges the resulting trees from right to left *)
+  let rec merge_pairs = function
+    | [] -> E
+    | [ h ] -> h
+    | h1 :: h2 :: hs -> merge (merge h1 h2) (merge_pairs hs)
+  ;;
+
+  (* discards the root and then merges the children *)
+  let delete_min = function
+    | E -> failwith "empty"
+    | T (_, hs) -> merge_pairs hs
+  ;;
+end

@@ -258,6 +258,55 @@ let test_delete_min_explicit () =
        (NE (1, IntSplayHeap.insert 2 IntSplayHeap.empty |> IntSplayHeap.insert 2)))
 ;;
 
+module IntPairingHeap = struct
+  include PairingHeap (OrdInt)
+
+  let rec pp fmt = function
+    | E -> Format.fprintf fmt "E"
+    | T (e, ts) ->
+      Format.fprintf
+        fmt
+        "T(%a, [%a])"
+        OrdInt.pp
+        e
+        (Fmt.list ~sep:(Fmt.any "; ") (fun fmt -> pp fmt))
+        ts
+  ;;
+end
+
+let pairing_heap = Alcotest.testable IntPairingHeap.pp ( = )
+
+let test_find_min_pairing () =
+  let open IntPairingHeap in
+  Alcotest.check_raises "find_min empty" (Failure "empty") (fun () ->
+    find_min empty |> ignore);
+  Alcotest.(check int) "find_min non-empty" 1 (find_min (T (1, [])))
+;;
+
+let test_insert_pairing () =
+  let open IntPairingHeap in
+  Alcotest.(check pairing_heap) "insert empty" (T (1, [])) (insert 1 empty);
+  Alcotest.(check pairing_heap)
+    "insert non-empty"
+    (T (1, [ T (2, []); T (3, []) ]))
+    (insert 3 empty |> insert 1 |> insert 2);
+  Alcotest.(check pairing_heap)
+    "insert inverse non-empty"
+    (T (1, [ T (2, [ T (3, [ T (4, [ T (5, []) ]) ]) ]) ]))
+    (insert 5 empty |> insert 4 |> insert 3 |> insert 2 |> insert 1)
+;;
+
+let test_delete_min_pairing () =
+  let open IntPairingHeap in
+  Alcotest.check_raises "delete_min empty" (Failure "empty") (fun () ->
+    delete_min empty |> ignore);
+  Alcotest.(check pairing_heap) "delete_min non-empty" empty (insert 1 empty |> delete_min);
+  Alcotest.(check pairing_heap)
+    "delete_min deeper non-empty"
+    (T (2, [ T (3, [ T (4, [ T (5, []) ]) ]) ]))
+    (insert 5 empty |> insert 4 |> insert 3 |> insert 2 |> insert 1 |> delete_min)
+;;
+
 let suite =
   [ "LeftistHeap.merge", `Quick, test_merge
   ; "LeftistHeap.insert", `Quick, test_insert
@@ -270,5 +319,8 @@ let suite =
   ; "SplayHeap.delete_min", `Quick, test_delete_min_splay
   ; "ExplicitSplayHeap.find_min", `Quick, test_find_min_explicit
   ; "ExplicitSplayHeap.delete_min", `Quick, test_delete_min_explicit
+  ; "PairingHeap.find_min", `Quick, test_find_min_pairing
+  ; "PairingHeap.insert", `Quick, test_insert_pairing
+  ; "PairingHeap.delete_min", `Quick, test_delete_min_pairing
   ]
 ;;
