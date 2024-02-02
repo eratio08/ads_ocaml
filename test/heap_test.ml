@@ -304,7 +304,11 @@ let test_delete_min_pairing () =
   Alcotest.(check pairing_heap)
     "delete_min deeper non-empty"
     (T (2, [ T (3, [ T (4, [ T (5, []) ]) ]) ]))
-    (insert 5 empty |> insert 4 |> insert 3 |> insert 2 |> insert 1 |> delete_min)
+    (insert 5 empty |> insert 4 |> insert 3 |> insert 2 |> insert 1 |> delete_min);
+  Alcotest.(check pairing_heap)
+    "delete_min non linear"
+    (T (2, [ T (3, []) ]))
+    (delete_min (insert 3 empty |> insert 1 |> insert 2))
 ;;
 
 let suite =
