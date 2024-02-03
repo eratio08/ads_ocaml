@@ -4,7 +4,7 @@ module type Queue = sig
   val empty : 'a t
   val is_empty : 'a t -> bool
 
-  (* cons backwards to cons in the right*)
+  (* cons backwards to cons, append on the right *)
   val snoc : 'a -> 'a t -> 'a t
   val head : 'a t -> 'a option
   val head_exn : 'a t -> 'a
@@ -117,4 +117,40 @@ module FiFo_dequeue = struct
   ;;
 
   let init_exn t = init t |> Option.get
+end
+
+module StreamQueue = struct
+  open Stream
+
+  type 'a t = int * 'a Stream.t * int * 'a Stream.t
+
+  let empty = 0, Stream.Nil, 0, Stream.Nil
+
+  let is_empty = function
+    | 0, Stream.Nil, _, _ -> true
+    | _ -> false
+  ;;
+
+  (* Reverse r whenever r > f *)
+  let check = function
+    | (len_f, _, len_r, _) as q when len_r <= len_f -> q
+    | len_f, f, len_r, r ->
+      len_f + len_r, Stream.( ++ ) f (Stream.reverse r), 0, Stream.Nil
+  ;;
+
+  let snoc x (len_f, f, len_r, r) = check (len_f, f, len_r + 1, Stream.Cons (lazy (x, r)))
+
+  let head = function
+    | _, Stream.Nil, _, _ -> None
+    | _, Stream.Cons (lazy (x, _)), _, _ -> Some x
+  ;;
+
+  let head_exn t = head t |> Option.get
+
+  let tail = function
+    | _, Stream.Nil, _, _ -> None
+    | len_f, Stream.Cons (lazy (_, f)), len_r, r -> Some (check (len_f - 1, f, len_r, r))
+  ;;
+
+  let tail_exn t = tail t |> Option.get
 end

@@ -63,10 +63,93 @@ let test_tail () =
     (tail ([ 1 ], [ 4; 3; 2 ]))
 ;;
 
+open Ads_ocaml.Stream
+
+module Stream_test = struct
+  let rec pp fmt = function
+    | Stream.Nil -> Format.fprintf fmt "Nil"
+    | Stream.Cons (lazy (x, s)) ->
+      Format.fprintf fmt "Cons (lazy (%d, %a))" x (fun fmt -> pp fmt) s
+  ;;
+
+  let rec equal t1 t2 =
+    let open Stream in
+    match t1, t2 with
+    | Nil, Nil -> true
+    | Cons (lazy (h1, t1)), Cons (lazy (h2, t2)) when h1 = h2 -> equal t1 t2
+    | _ -> false
+  ;;
+end
+
+module StreamQueue_test = struct
+  let pp fmt = function
+    | _, Stream.Nil, _, _ -> Format.fprintf fmt "(0, Nil, 0, Nil)"
+    | len_f, f, len_r, r ->
+      Format.fprintf fmt "(%d, %a, %d, %a)" len_f Stream_test.pp f len_r Stream_test.pp r
+  ;;
+
+  let equal t1 t2 =
+    let open Stream in
+    match t1, t2 with
+    | (_, Nil, _, _), (_, Nil, _, _) -> true
+    | (len_f1, f1, len_r1, r1), (len_f2, f2, len_r2, r2) ->
+      len_f1 = len_f2
+      && len_r1 = len_r2
+      && Stream_test.equal f1 f2
+      && Stream_test.equal r1 r2
+  ;;
+end
+
+let stream_queue = Alcotest.testable StreamQueue_test.pp StreamQueue_test.equal
+
+let test_snoc_stream () =
+  let open Stream in
+  let open StreamQueue in
+  Alcotest.(check stream_queue)
+    "snoc empty"
+    (1, Cons (lazy (1, Nil)), 0, Nil)
+    (snoc 1 empty);
+  Alcotest.(check stream_queue)
+    "snoc non-empty"
+    (1, Cons (lazy (1, Nil)), 1, Cons (lazy (2, Nil)))
+    (snoc 1 empty |> snoc 2);
+  Alcotest.(check stream_queue)
+    "snoc with re-ordering"
+    (3, Cons (lazy (1, Cons (lazy (2, Cons (lazy (3, Nil)))))), 0, Nil)
+    (snoc 1 empty |> snoc 2 |> snoc 3)
+;;
+
+let test_head_stream () =
+  let open Stream in
+  let open StreamQueue in
+  Alcotest.(check (option int)) "head empty" None (head empty);
+  Alcotest.(check (option int))
+    "head non-empty"
+    (Some 1)
+    (head (1, Cons (lazy (1, Nil)), 0, Nil))
+;;
+
+let test_tail_stream () =
+  let open Stream in
+  let open StreamQueue in
+  Alcotest.(check (option stream_queue)) "tail empty" None (tail empty);
+  Alcotest.(check (option stream_queue))
+    "tail non-empty"
+    (Some (2, Cons (lazy (2, Cons (lazy (3, Nil)))), 0, Nil))
+    (tail (3, Cons (lazy (1, Cons (lazy (2, Cons (lazy (3, Nil)))))), 0, Nil));
+  Alcotest.(check (option stream_queue))
+    "tail with re-ordering"
+    (Some (1, Cons (lazy (2, Nil)), 0, Nil))
+    (tail (1, Cons (lazy (1, Nil)), 1, Cons (lazy (2, Nil))))
+;;
+
 let suite =
   [ "Dequeue.cons", `Quick, test_cons
   ; "Dequeue.snoc", `Quick, test_snoc
   ; "Dequeue.init", `Quick, test_init
   ; "Dequeue.tail", `Quick, test_tail
+  ; "StreamQueue.snoc", `Quick, test_snoc_stream
+  ; "StreamQueue.head", `Quick, test_head_stream
+  ; "StreamQueue.tail", `Quick, test_tail_stream
   ]
 ;;
