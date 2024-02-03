@@ -41,7 +41,7 @@ module Stream = struct
   ;;
 end
 
-module Stream_fn = struct
+module StreamFn = struct
   type 'a t =
     | Empty
     | Cons of

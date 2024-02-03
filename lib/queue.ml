@@ -12,7 +12,7 @@ module type Queue = sig
   val tail_exn : 'a t -> 'a t
 end
 
-module Fifo_queue : Queue = struct
+module FifoQueue : Queue = struct
   type 'a t = 'a list * 'a list
 
   let empty = [], []
@@ -65,7 +65,7 @@ module type Dequeue = sig
   val init_exn : 'a t -> 'a t
 end
 
-module FiFo_dequeue = struct
+module FiFoDequeue = struct
   type 'a t = 'a list * 'a list
 
   let empty = [], []
@@ -119,6 +119,7 @@ module FiFo_dequeue = struct
   let init_exn t = init t |> Option.get
 end
 
+(* Lazy Queue that has an amortized run time of O(1) for all operations. *)
 module StreamQueue = struct
   open Stream
 

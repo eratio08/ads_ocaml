@@ -1,3 +1,4 @@
+(* Models the native lazy *)
 module MyLazy = struct
   type 'a lazy_state =
     | Delayed of (unit -> 'a)

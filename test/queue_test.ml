@@ -13,7 +13,7 @@ let pp fmt (f, r) =
 let dequeue = Alcotest.testable pp ( = )
 
 let test_cons () =
-  let open FiFo_dequeue in
+  let open FiFoDequeue in
   Alcotest.(check dequeue) "cons empty" ([ 1 ], []) (cons 1 empty);
   Alcotest.(check dequeue) "cons non-empty" ([ 2 ], [ 1 ]) (empty |> cons 1 |> cons 2);
   Alcotest.(check dequeue)
@@ -23,7 +23,7 @@ let test_cons () =
 ;;
 
 let test_snoc () =
-  let open FiFo_dequeue in
+  let open FiFoDequeue in
   Alcotest.(check dequeue) "snoc empty" ([ 1 ], []) (snoc 1 empty);
   Alcotest.(check dequeue)
     "snoc non-empty"
@@ -36,7 +36,7 @@ let test_snoc () =
 ;;
 
 let test_init () =
-  let open FiFo_dequeue in
+  let open FiFoDequeue in
   Alcotest.(check (option dequeue)) "init empty" None (init empty);
   Alcotest.(check (option dequeue)) "init non-empty" (Some ([ 1 ], [])) (init ([ 1 ], []));
   Alcotest.(check (option dequeue))
@@ -50,7 +50,7 @@ let test_init () =
 ;;
 
 let test_tail () =
-  let open FiFo_dequeue in
+  let open FiFoDequeue in
   Alcotest.(check (option dequeue)) "init empty" None (tail empty);
   Alcotest.(check (option dequeue)) "init non-empty" (Some ([], [])) (tail ([ 1 ], []));
   Alcotest.(check (option dequeue))
@@ -65,7 +65,7 @@ let test_tail () =
 
 open Ads_ocaml.Stream
 
-module Stream_test = struct
+module StreamTest = struct
   let rec pp fmt = function
     | Stream.Nil -> Format.fprintf fmt "Nil"
     | Stream.Cons (lazy (x, s)) ->
@@ -81,11 +81,11 @@ module Stream_test = struct
   ;;
 end
 
-module StreamQueue_test = struct
+module StreamQueueTest = struct
   let pp fmt = function
     | _, Stream.Nil, _, _ -> Format.fprintf fmt "(0, Nil, 0, Nil)"
     | len_f, f, len_r, r ->
-      Format.fprintf fmt "(%d, %a, %d, %a)" len_f Stream_test.pp f len_r Stream_test.pp r
+      Format.fprintf fmt "(%d, %a, %d, %a)" len_f StreamTest.pp f len_r StreamTest.pp r
   ;;
 
   let equal t1 t2 =
@@ -95,12 +95,12 @@ module StreamQueue_test = struct
     | (len_f1, f1, len_r1, r1), (len_f2, f2, len_r2, r2) ->
       len_f1 = len_f2
       && len_r1 = len_r2
-      && Stream_test.equal f1 f2
-      && Stream_test.equal r1 r2
+      && StreamTest.equal f1 f2
+      && StreamTest.equal r1 r2
   ;;
 end
 
-let stream_queue = Alcotest.testable StreamQueue_test.pp StreamQueue_test.equal
+let stream_queue = Alcotest.testable StreamQueueTest.pp StreamQueueTest.equal
 
 let test_snoc_stream () =
   let open Stream in
