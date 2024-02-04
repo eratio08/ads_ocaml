@@ -87,6 +87,7 @@ module BinomialHeap (E : Ord.Ord) = struct
     match n1, n2 with
     | Node (r, x1, cs1), (Node (_, x2, _) as n2) when x1 <= x2 ->
       Node (r + 1, x1, n2 :: cs1)
+    (* x1 > x2 *)
     | n1, Node (r, x2, cs2) -> Node (r + 1, x2, n1 :: cs2)
   ;;
 
@@ -109,7 +110,7 @@ module BinomialHeap (E : Ord.Ord) = struct
     | [], t2 -> t2
     | n1 :: r1, (n2 :: _ as t2) when rank n1 < rank n2 -> n1 :: merge r1 t2
     | (n1 :: _ as t1), n2 :: r2 when rank n1 > rank n2 -> n2 :: merge t1 r2
-    (* ranks are equal, so join *)
+    (* n2 = n1, so join *)
     | n1 :: r1, n2 :: r2 -> ins_tree (link n1 n2) (merge r1 r2)
   ;;
 
@@ -311,5 +312,96 @@ module PairingHeap (Elem : Ord.Ord) = struct
   let delete_min = function
     | E -> failwith "empty"
     | T (_, hs) -> merge_pairs hs
+  ;;
+end
+
+(** A lazy binomial heap turn the insert into O(1) amortized worst-case complexity. *)
+module LazyBinomialHeap (Elem : Ord.Ord) = struct
+  type e = Elem.t
+
+  (** Node has a rank, a root element and a list of children *)
+  type n = Node of int * e * n list
+
+  type t = n list Stdlib.Lazy.t
+
+  let empty = lazy []
+
+  let is_empty = function
+    | (lazy []) -> true
+    | _ -> false
+  ;;
+
+  let rank (Node (r, _, _)) = r
+  let root (Node (_, x, _)) = x
+
+  (** Link two nodes.
+      The node with the greater root is prepped to the smaller node's children.
+      The rank is increase in any case. *)
+  let link n1 n2 =
+    match n1, n2 with
+    | Node (r1, x1, c1), Node (_, x2, _) when x1 <= x2 -> Node (r1 + 1, x1, n2 :: c1)
+    (* x1 > x2 *)
+    | Node (r1, _, _), Node (_, x2, c2) -> Node (r1 + 1, x2, n1 :: c2)
+  ;;
+
+  (** Insert a node into a non-lazy heap.
+      If the rank of the node is smaller than the rank of the root of the heap, prepped the node.
+      Otherwise link the node and the root and insert the new node into the heap. *)
+  let rec ins_heap n1 = function
+    | [] -> [ n1 ]
+    | n :: _ as n2 when rank n1 < rank n -> n1 :: n2
+    (* rank t1 >= rank t *)
+    | n :: ns -> ins_heap (link n1 n) ns
+  ;;
+
+  (** Merges two non-lazy heaps.
+      If the rank of the root of the first heap is smaller, prepped it's root to the merge of it's children with the second heap.
+      If the rank of the root of the second heap is smaller, prepped it's root to the merge of it's children with the first heap.
+      If both roots have the same rank, merge the roots and insert the new node into the merge of both threes children. *)
+  let rec mrg t1 t2 =
+    match t1, t2 with
+    | t1, [] -> t1
+    | [], t2 -> t2
+    | n1 :: ns1, n2 :: _ when rank n1 < rank n2 -> n1 :: mrg ns1 t2
+    | n1 :: _, n2 :: ns2 when rank n1 > rank n2 -> n2 :: mrg ns2 t1
+    (* rank n1 = rank n2 *)
+    | n1 :: ns1, n2 :: ns2 -> ins_heap (link n1 n2) (mrg ns1 ns2)
+  ;;
+
+  (** Insert into a lazy heap.
+      Store the value into a new node with rank 0 and no children, then insert this node into the heap. *)
+  let insert x (lazy t) = lazy (ins_heap (Node (0, x, [])) t)
+
+  (** Merge two lazy heaps. *)
+  let merge (lazy t1) (lazy t2) = lazy (mrg t1 t2)
+
+  (** Removes the min from the heap and returns the minimum and the remaining heap.
+      If only a single node exists return the single node and an empty heap.
+      Otherwise take the first node and find the min in the tail.
+      Compare the head is smaller than the minimum in the tail return n and the tail.
+      If the tail's minimum is smaller return the minimum of the tail and append the head to the tail. *)
+  let rec remove_min_heap = function
+    | [] -> failwith "empty"
+    | [ n ] -> n, []
+    | n :: ns ->
+      (match remove_min_heap ns with
+       | n', _ when root n <= root n' -> n, ns
+       (* root n > root n' *)
+       | n', ns' -> n', n :: ns')
+  ;;
+
+  (** Find the minimum in the heap.
+      Remove the minimum and return it. *)
+  let find_min (lazy ts) =
+    let t, _ = remove_min_heap ts in
+    root t
+  ;;
+
+  (** Remove the minimum from the heap.
+      Take the children of the removed min node and reverse them.
+      Merge the reverse children with the remaining heap. *)
+  let delete_min (lazy ts) =
+    let Node (_, _, c1), c2 = remove_min_heap ts in
+    lazy (mrg (List.rev c1) c2)
   ;;
 end

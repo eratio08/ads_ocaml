@@ -311,6 +311,81 @@ let test_delete_min_pairing () =
     (delete_min (insert 3 empty |> insert 1 |> insert 2))
 ;;
 
+module CharLazyBinomialHeap = struct
+  module OrdChar = struct
+    include Ads_ocaml.Ord.Ord (Char)
+
+    let pp p c = Format.fprintf p "'%c'" c
+  end
+
+  include LazyBinomialHeap (OrdChar)
+
+  let rec pp fmt = function
+    | (lazy []) -> Format.fprintf fmt "[]"
+    | (lazy (Node (r, c, ns) :: ts)) ->
+      Format.fprintf
+        fmt
+        "Node (%d, %a, %a) :: %a"
+        r
+        OrdChar.pp
+        c
+        (fun fmt -> pp fmt)
+        (lazy ns)
+        (fun fmt -> pp fmt)
+        (lazy ts)
+  ;;
+
+  let rec equal_node n1 n2 =
+    match n1, n2 with
+    | Node (r1, x1, []), Node (r2, x2, []) when r1 = r2 && x1 = x2 -> true
+    | Node (r1, x1, c1), Node (r2, x2, c2)
+      when r1 = r2 && x1 = x2 && List.length c1 = List.length c2 ->
+      List.fold_left2 (fun acc n1 n2 -> acc && equal_node n1 n2) true c1 c2
+    | _, _ -> false
+  ;;
+
+  let rec equal t1 t2 =
+    match t1, t2 with
+    | (lazy []), (lazy []) -> true
+    | (lazy (n1 :: ns1)), (lazy (n2 :: ns2)) when equal_node n1 n2 ->
+      equal (lazy ns1) (lazy ns2)
+    | _ -> false
+  ;;
+end
+
+let lazy_binomial_heap =
+  Alcotest.testable CharLazyBinomialHeap.pp CharLazyBinomialHeap.equal
+;;
+
+let test_is_empty_lazy_binomial () =
+  let open CharLazyBinomialHeap in
+  Alcotest.(check bool) "is_empty empty" true (is_empty empty);
+  Alcotest.(check bool) "is_empty non-empty" false (is_empty (lazy [ Node (1, 'a', []) ]))
+;;
+
+let test_insert_lazy_binomial () =
+  let open CharLazyBinomialHeap in
+  Alcotest.(check lazy_binomial_heap)
+    "insert empty"
+    (lazy [ Node (0, 'a', []) ])
+    (insert 'a' empty);
+  Alcotest.(check lazy_binomial_heap)
+    "insert non-empty"
+    (lazy [ Node (0, 'a', []); Node (1, 'x', Node (0, 'z', []) :: []) ])
+    (insert 'z' empty |> insert 'x' |> insert 'a')
+;;
+
+let test_find_min_lazy_binomial () =
+  let open CharLazyBinomialHeap in
+  Alcotest.(check_raises) "find_min empty" (Failure "empty") (fun () ->
+    find_min empty |> ignore);
+  Alcotest.(check char) "find_min non-empty" 'a' (insert 'a' empty |> find_min);
+  Alcotest.(check char)
+    "find_min non-empty"
+    'a'
+    (insert 'x' empty |> insert 'z' |> insert 'a' |> find_min)
+;;
+
 let suite =
   [ "LeftistHeap.merge", `Quick, test_merge
   ; "LeftistHeap.insert", `Quick, test_insert
@@ -326,5 +401,8 @@ let suite =
   ; "PairingHeap.find_min", `Quick, test_find_min_pairing
   ; "PairingHeap.insert", `Quick, test_insert_pairing
   ; "PairingHeap.delete_min", `Quick, test_delete_min_pairing
+  ; "LazyBinomialHeap.is_empty", `Quick, test_is_empty_lazy_binomial
+  ; "LazyBinomialHeap.insert", `Quick, test_insert_lazy_binomial
+  ; "LazyBinomialHeap.find_min", `Quick, test_find_min_lazy_binomial
   ]
 ;;
