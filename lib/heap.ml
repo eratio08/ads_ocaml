@@ -315,7 +315,8 @@ module PairingHeap (Elem : Ord.Ord) = struct
   ;;
 end
 
-(** A lazy binomial heap turn the insert into O(1) amortized worst-case complexity. *)
+(** A lazy binomial heap turn the insert into O(1) amortized worst-case complexity.
+    Uses monolithic suspension, utilizing suspended lists. *)
 module LazyBinomialHeap (Elem : Ord.Ord) = struct
   type e = Elem.t
 
