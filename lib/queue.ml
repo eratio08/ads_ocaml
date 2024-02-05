@@ -119,8 +119,8 @@ module FiFoDequeue = struct
   let init_exn t = init t |> Option.get
 end
 
-(* Lazy Queue that has an amortized run time of O(1) for all operations.
-   Using incremental suspension, by utilizing streams. *)
+(** Lazy Queue that has an amortized run time of O(1) for all operations.
+    Using incremental suspension, by utilizing streams. *)
 module StreamQueue = struct
   open Stream
 
