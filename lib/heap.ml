@@ -10,7 +10,15 @@ module type Heap = sig
   val delete_min : t -> t
 end
 
-module LeftistHeap (E : Ord.Ord) = struct
+module LeftistHeap (E : Ord.Ord) : sig
+  type e = E.t
+
+  type t =
+    | Empty
+    | Cons of int * e * t * t
+
+  include Heap with type e := e and type t := t
+end = struct
   type e = E.t
 
   type t =
@@ -68,7 +76,13 @@ end
 
    Trees of equal rank are always linked using `link`.
 *)
-module BinomialHeap (E : Ord.Ord) = struct
+module BinomialHeap (E : Ord.Ord) : sig
+  type e = E.t
+  type n = Node of int * e * n list
+  type t = n list
+
+  include Heap with type e := e and type t := t
+end = struct
   type e = E.t
   type n = Node of int * e * n list
   type t = n list
@@ -135,7 +149,15 @@ module BinomialHeap (E : Ord.Ord) = struct
   ;;
 end
 
-module ExplicitMin (H : Heap) = struct
+module ExplicitMin (H : Heap) : sig
+  type e = H.e
+
+  type t =
+    | E
+    | NE of e * H.t
+
+  include Heap with type e := e and type t := t
+end = struct
   type e = H.e
 
   type t =
@@ -177,7 +199,17 @@ module ExplicitMin (H : Heap) = struct
   ;;
 end
 
-module SplayHeap (Elem : Ord.Ord) = struct
+module SplayHeap (Elem : Ord.Ord) : sig
+  type e = Elem.t
+
+  type t =
+    | Empty
+    | Tree of t * e * t
+
+  val insert' : e -> t -> t
+
+  include Heap with type e := e and type t := t
+end = struct
   type e = Elem.t
 
   type t =
@@ -271,7 +303,15 @@ module SplayHeap (Elem : Ord.Ord) = struct
   ;;
 end
 
-module PairingHeap (Elem : Ord.Ord) = struct
+module PairingHeap (Elem : Ord.Ord) : sig
+  type e = Elem.t
+
+  type t =
+    | E
+    | T of e * t list
+
+  include Heap with type e := e and type t := t
+end = struct
   type e = Elem.t
 
   type t =
@@ -317,7 +357,13 @@ end
 
 (** A lazy binomial heap turn the insert into O(1) amortized worst-case complexity.
     Uses monolithic suspension, utilizing suspended lists. *)
-module LazyBinomialHeap (Elem : Ord.Ord) = struct
+module LazyBinomialHeap (Elem : Ord.Ord) : sig
+  type e = Elem.t
+  type n = Node of int * e * n list
+  type t = n list Stdlib.Lazy.t
+
+  include Heap with type e := e and type t := t
+end = struct
   type e = Elem.t
 
   (** Node has a rank, a root element and a list of children *)

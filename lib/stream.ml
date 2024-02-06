@@ -7,7 +7,13 @@ module type Stream = sig
   val reverse : 'a t -> 'a t
 end
 
-module Stream = struct
+module Stream : sig
+  type 'a t =
+    | Nil
+    | Cons of ('a * 'a t) Stdlib.Lazy.t
+
+  include Stream with type 'a t := 'a t
+end = struct
   type 'a t =
     | Nil
     | Cons of ('a * 'a t) Stdlib.Lazy.t
@@ -32,7 +38,7 @@ module Stream = struct
     | n, Cons (lazy (_, s)) -> drop (n - 1) s
   ;;
 
-  let rec reverse t =
+  let reverse t =
     let rec reverse' = function
       | Nil, r -> r
       | Cons (lazy (x, s)), r -> reverse' (s, Cons (lazy (x, r)))
@@ -41,7 +47,16 @@ module Stream = struct
   ;;
 end
 
-module StreamFn = struct
+module StreamFn : sig
+  type 'a t =
+    | Empty
+    | Cons of
+        { head : unit -> 'a
+        ; tail : unit -> 'a t
+        }
+
+  include Stream with type 'a t := 'a t
+end = struct
   type 'a t =
     | Empty
     | Cons of

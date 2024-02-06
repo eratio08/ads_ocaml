@@ -12,7 +12,11 @@ module type Queue = sig
   val tail_exn : 'a t -> 'a t
 end
 
-module FifoQueue : Queue = struct
+module FifoQueue : sig
+  type 'a t = 'a list * 'a list
+
+  include Queue with type 'a t := 'a t
+end = struct
   type 'a t = 'a list * 'a list
 
   let empty = [], []
@@ -65,7 +69,11 @@ module type Dequeue = sig
   val init_exn : 'a t -> 'a t
 end
 
-module FiFoDequeue = struct
+module FiFoDequeue : sig
+  type 'a t = 'a list * 'a list
+
+  include Dequeue with type 'a t := 'a t
+end = struct
   type 'a t = 'a list * 'a list
 
   let empty = [], []
@@ -121,7 +129,13 @@ end
 
 (** Lazy Queue that has an amortized run time of O(1) for all operations.
     Using incremental suspension, by utilizing streams. *)
-module StreamQueue = struct
+module StreamQueue : sig
+  open Stream
+
+  type 'a t = int * 'a Stream.t * int * 'a Stream.t
+
+  include Queue with type 'a t := 'a t
+end = struct
   open Stream
 
   type 'a t = int * 'a Stream.t * int * 'a Stream.t
@@ -158,7 +172,11 @@ module StreamQueue = struct
 end
 
 (** Lazy Queue, using monolithic suspension. *)
-module LazyQueue = struct
+module LazyQueue : sig
+  type 'a t = 'a list * int * 'a list Stdlib.Lazy.t * int * 'a list
+
+  include Queue with type 'a t := 'a t
+end = struct
   (** The lazy queue consists of:
       1) a working copy of the suspended front list
       2) the size of the front list
@@ -166,6 +184,13 @@ module LazyQueue = struct
       4) the size of the rear list
       5) the rear list *)
   type 'a t = 'a list * int * 'a list Stdlib.Lazy.t * int * 'a list
+
+  let empty = [], 0, lazy [], 0, []
+
+  let is_empty = function
+    | [], 0, _, _, _ -> true
+    | _ -> false
+  ;;
 
   (** Check if the working copy needs to be set.
       If the working copy is empty evaluate the front list and make it the working copy. *)
