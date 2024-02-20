@@ -44,5 +44,18 @@ let test_add_lazy_list () =
 ;;
 
 (* sort *)
+let test_sort_lazy_list () =
+  let open IntLazySortableList in
+  Alcotest.(check (list int)) "sort empty" [] (sort empty);
+  Alcotest.(check (list int)) "sort non-empty" [ 1; 2 ] (sort (2, lazy [ [ 1; 2 ] ]));
+  Alcotest.(check (list int))
+    "sort non-empty reversed"
+    [ 1; 2; 3 ]
+    (add 3 empty |> add 2 |> add 1 |> sort)
+;;
 
-let suite = [ "LazySortableList.add", `Quick, test_add_lazy_list ]
+let suite =
+  [ "LazySortableList.add", `Quick, test_add_lazy_list
+  ; "LazySortableList.sort", `Quick, test_sort_lazy_list
+  ]
+;;
