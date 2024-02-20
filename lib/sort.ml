@@ -1,5 +1,5 @@
-module type Sortable = functor (Elem : Ord.Ord) -> sig
-  type e = Elem.t
+module type Sortable = sig
+  type e
   type t
 
   val empty : t
@@ -11,7 +11,7 @@ module LazySortableList (Elem : Ord.Ord) : sig
   type e = Elem.t
   type t = int * e list list Stdlib.Lazy.t
 
-  include Sortable : functor(Elem) -> with type e := e and type t := t
+  include Sortable with type e := e and type t := t
 end = struct
   type e = Elem.t
 
@@ -36,19 +36,25 @@ end = struct
   ;;
 
   (** Adds an segment to the list.
-      Increase the size by one. If the existing segments are even prepped the new element.
-      If the existing segments are uneven, merge the new segment with the head segment of the existing segments.
-      Then recursively add this new segment with the fail of the existing segments and divide the size by two. *)
-  let add x (size, segs) =
+      Increase the size by one and add the segment to the lazy segment list.
+      When adding elements to the list the order is maintained.
+      Amortized complexity is O(log n). *)
+  let add (x : e) ((size, segs) : t) : t =
+    (* If the existing segments are even prepped the new element.
+       If the existing segments are uneven, merge the new segment with the head segment of the existing segments.
+       Then recursively add this new segment with the tail of the existing segments and divide the size by two. *)
     let rec add_seg seg segs size =
       match size mod 2 with
       | 0 -> seg :: segs
       | _ -> add_seg (mrg seg (List.hd segs)) (List.tl segs) (size / 2)
     in
-    size + 1, lazy (add_seg x (Stdlib.Lazy.force segs) size)
+    size + 1, lazy (add_seg [ x ] (Stdlib.Lazy.force segs) size)
   ;;
 
-  let sort (_, segs) =
+  (** Sorts the given lazy list my merging it with an empty list.
+      Merging with an empty list will cause a merging cascade though all segments there by sorting the elements.
+      Amortized complexity is O(n). *)
+  let sort ((_, segs) : t) : e list =
     let rec mrg_all xs segs =
       match xs, segs with
       | xs, [] -> xs
@@ -57,5 +63,3 @@ end = struct
     mrg_all [] (Stdlib.Lazy.force segs)
   ;;
 end
-
-
