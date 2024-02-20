@@ -269,7 +269,7 @@ module IntPairingHeap = struct
         "T(%a, [%a])"
         OrdInt.pp
         e
-        (Fmt.list ~sep:(Fmt.any "; ") (fun fmt -> pp fmt))
+        Fmt.(list ~sep:semi (fun fmt -> pp fmt))
         ts
   ;;
 end

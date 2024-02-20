@@ -1,13 +1,7 @@
 open Ads_ocaml.Queue
 
 let pp fmt (f, r) =
-  Format.fprintf
-    fmt
-    "([%a], [%a])"
-    Fmt.(list ~sep:(any "; ") int)
-    f
-    Fmt.(list ~sep:(any "; ") int)
-    r
+  Format.fprintf fmt "([%a], [%a])" Fmt.(list ~sep:semi int) f Fmt.(list ~sep:semi int) r
 ;;
 
 let dequeue = Alcotest.testable pp ( = )
