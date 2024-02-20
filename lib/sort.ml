@@ -7,7 +7,7 @@ module type Sortable = sig
   val sort : t -> e list
 end
 
-module LazySortableList (Elem : Ord.Ord) : sig
+module BottomUpMergeSort (Elem : Ord.Ord) : sig
   type e = Elem.t
   type t = int * e list list Stdlib.Lazy.t
 

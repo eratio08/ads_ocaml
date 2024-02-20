@@ -1,8 +1,8 @@
 open Ads_ocaml.Sort
 
-module IntLazySortableList = struct
+module IntBottomtUpMergeSort = struct
   module OrdInt = Ads_ocaml.Ord.Ord (Int)
-  include LazySortableList (OrdInt)
+  include BottomUpMergeSort (OrdInt)
 
   let pp fmt (t : t) =
     match t with
@@ -26,12 +26,12 @@ module IntLazySortableList = struct
 end
 
 let int_lazy_sortable_list =
-  Alcotest.testable IntLazySortableList.pp IntLazySortableList.equal
+  Alcotest.testable IntBottomtUpMergeSort.pp IntBottomtUpMergeSort.equal
 ;;
 
 (* add *)
 let test_add_lazy_list () =
-  let open IntLazySortableList in
+  let open IntBottomtUpMergeSort in
   Alcotest.(check int_lazy_sortable_list) "add empty" (1, lazy [ [ 1 ] ]) (add 1 empty);
   Alcotest.(check int_lazy_sortable_list)
     "add non-empty"
@@ -45,7 +45,7 @@ let test_add_lazy_list () =
 
 (* sort *)
 let test_sort_lazy_list () =
-  let open IntLazySortableList in
+  let open IntBottomtUpMergeSort in
   Alcotest.(check (list int)) "sort empty" [] (sort empty);
   Alcotest.(check (list int)) "sort non-empty" [ 1; 2 ] (sort (2, lazy [ [ 1; 2 ] ]));
   Alcotest.(check (list int))
@@ -55,7 +55,7 @@ let test_sort_lazy_list () =
 ;;
 
 let suite =
-  [ "LazySortableList.add", `Quick, test_add_lazy_list
-  ; "LazySortableList.sort", `Quick, test_sort_lazy_list
+  [ "BottomUpMergeSort.add", `Quick, test_add_lazy_list
+  ; "BottomUpMergeSort.sort", `Quick, test_sort_lazy_list
   ]
 ;;
