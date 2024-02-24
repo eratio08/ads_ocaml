@@ -266,10 +266,10 @@ module IntPairingHeap = struct
     | T (e, ts) ->
       Format.fprintf
         fmt
-        "T(%a, [%a])"
+        "T(%a, %a)"
         OrdInt.pp
         e
-        Fmt.(list ~sep:semi (fun fmt -> pp fmt))
+        Fmt.(brackets (list ~sep:semi (fun fmt -> pp fmt)))
         ts
   ;;
 end
@@ -293,7 +293,19 @@ let test_insert_pairing () =
   Alcotest.(check pairing_heap)
     "insert inverse non-empty"
     (T (1, [ T (2, [ T (3, [ T (4, [ T (5, []) ]) ]) ]) ]))
-    (insert 5 empty |> insert 4 |> insert 3 |> insert 2 |> insert 1)
+    (insert 5 empty |> insert 4 |> insert 3 |> insert 2 |> insert 1);
+  Alcotest.(check pairing_heap)
+    "insert alternating non-empty"
+    (T (1, [ T (3, []); T (2, []); T (4, []); T (5, []) ]))
+    (insert 5 empty |> insert 1 |> insert 4 |> insert 2 |> insert 3);
+  Alcotest.(check pairing_heap)
+    "insert alternating non-empty"
+    (T (1, [ T (2, []); T (3, [ T (4, []); T (5, []) ]) ]))
+    (insert 5 empty |> insert 3 |> insert 4 |> insert 1 |> insert 2);
+  Alcotest.(check pairing_heap)
+    "insert alternating non-empty"
+    (T (1, [ T (3, []); T (4, []); T (5, []); T (2, []) ]))
+    (insert 1 empty |> insert 2 |> insert 5 |> insert 4 |> insert 3)
 ;;
 
 let test_delete_min_pairing () =
@@ -308,7 +320,12 @@ let test_delete_min_pairing () =
   Alcotest.(check pairing_heap)
     "delete_min non linear"
     (T (2, [ T (3, []) ]))
-    (delete_min (insert 3 empty |> insert 1 |> insert 2))
+    (delete_min (insert 3 empty |> insert 1 |> insert 2));
+  Alcotest.(check pairing_heap)
+    "delete_min alternating non-empty"
+    (* Removes min from: T (1, [ T (3, []); T (4, []); T (5, []); T (2, []) ]) *)
+    (T (2, [ T (3, [ T (4, []) ]); T (5, []) ]))
+    (insert 1 empty |> insert 2 |> insert 5 |> insert 4 |> insert 3 |> delete_min)
 ;;
 
 module CharLazyBinomialHeap = struct

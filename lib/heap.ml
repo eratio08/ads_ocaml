@@ -314,6 +314,7 @@ module PairingHeap (Elem : Ord.Ord) : sig
 end = struct
   type e = Elem.t
 
+  (** Only well-formed heaps are allowed, so E will never appears in a child list of a T node. *)
   type t =
     | E
     | T of e * t list
@@ -325,30 +326,41 @@ end = struct
     | _ -> false
   ;;
 
+  (** Finds the minimum element in the heap, as this is the root it's complexity is O(1). *)
   let find_min = function
     | E -> failwith "empty"
     | T (x, _) -> x
   ;;
 
-  (* merge makes the tree with the larger root the leftmost child of the tree with the smaller root *)
+  (* Merges two heaps.
+     The heap with the larger root becomes the leftmost child of the heap with the smaller root.
+     Has O(1) amortized complexity. *)
   let merge t1 t2 =
     match t1, t2 with
-    | E, h | h, E -> h
-    | T (x, hs1), (T (y, _) as h2) when x <= y -> T (x, h2 :: hs1)
+    | E, t | t, E -> t
+    | T (x, xs), (T (y, _) as t2) when x <= y -> T (x, t2 :: xs)
     (* x > y *)
-    | h1, T (y, hs2) -> T (y, h1 :: hs2)
+    | t1, T (y, ys) -> T (y, t1 :: ys)
   ;;
 
+  (** Insert a given element into the heap.
+      Creates a singleton heap for the new element and merges it with the given heap.
+      Has O(1) amortized complexity. *)
   let insert x t = merge (T (x, [])) t
 
-  (* merges children in pairs from left to right then merges the resulting trees from right to left *)
+  (** Merges children in pairs from left to right then merges the resulting heaps from right to left. *)
   let rec merge_pairs = function
     | [] -> E
     | [ h ] -> h
     | h1 :: h2 :: hs -> merge (merge h1 h2) (merge_pairs hs)
   ;;
 
-  (* discards the root and then merges the children *)
+  (* Deletes the minimum element from the heap.
+     This operation coins the name of the data structure as it
+     discards the root and then merges the children in tow passes.
+     The first pass merges the children from left to right.
+     The second pass merges the resulting heaps from right to left.
+     Has am amortized complexity of O(log n). *)
   let delete_min = function
     | E -> failwith "empty"
     | T (_, hs) -> merge_pairs hs
