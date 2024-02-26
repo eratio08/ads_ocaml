@@ -403,6 +403,99 @@ let test_find_min_lazy_binomial () =
     (insert 'x' empty |> insert 'z' |> insert 'a' |> find_min)
 ;;
 
+module IntLazyPairingHeap = struct
+  include LazyPairingHeap (OrdInt)
+
+  let rec pp fmt = function
+    | E -> Format.fprintf fmt "E"
+    | T (e, b, (lazy m)) ->
+      Format.fprintf
+        fmt
+        "T(%a, %a, lazy %a)"
+        OrdInt.pp
+        e
+        (fun fmt -> pp fmt)
+        b
+        (Fmt.parens (fun fmt -> pp fmt))
+        m
+  ;;
+
+  let rec equal t1 t2 =
+    match t1, t2 with
+    | E, E -> true
+    | T (x, a, m), T (y, b, n) when x = y ->
+      equal a b && equal (Stdlib.Lazy.force m) (Stdlib.Lazy.force n)
+    | _, _ -> false
+  ;;
+end
+
+let lazy_pairing_heap = Alcotest.testable IntLazyPairingHeap.pp IntLazyPairingHeap.equal
+
+let test_insert_lazy_pairing_heap () =
+  let open IntLazyPairingHeap in
+  Alcotest.check lazy_pairing_heap "insert empty" (T (1, E, lazy E)) (insert 1 empty);
+  Alcotest.check
+    lazy_pairing_heap
+    "insert even non-empty"
+    (T (1, T (2, E, lazy E), lazy E))
+    (insert 1 empty |> insert 2);
+  Alcotest.check
+    lazy_pairing_heap
+    "insert even inverse non-empty"
+    (T (1, T (2, E, lazy E), lazy E))
+    (insert 2 empty |> insert 1);
+  Alcotest.check
+    lazy_pairing_heap
+    "insert uneven non-empty"
+    (T (1, E, lazy (T (2, T (3, E, lazy E), lazy E))))
+    (insert 1 empty |> insert 2 |> insert 3);
+  Alcotest.check
+    lazy_pairing_heap
+    "insert uneven inverse non-empty"
+    (T (1, T (2, T (3, E, lazy E), lazy E), lazy E))
+    (insert 3 empty |> insert 2 |> insert 1)
+;;
+
+let test_find_min_lazy_pairing_heap () =
+  let open IntLazyPairingHeap in
+  Alcotest.(check_raises) "find_min empty" (Failure "empty") (fun () ->
+    find_min empty |> ignore);
+  Alcotest.(check int) "find_min non-empty" 1 (find_min (T (1, E, lazy E)));
+  Alcotest.(check int)
+    "find_min uneven inverse non-empty"
+    1
+    (find_min (T (1, T (2, T (3, E, lazy E), lazy E), lazy E)))
+;;
+
+let test_delete_min_lazy_pairing_heap () =
+  let open IntLazyPairingHeap in
+  Alcotest.(check_raises) "find_min empty" (Failure "empty") (fun () ->
+    delete_min empty |> ignore);
+  Alcotest.(check lazy_pairing_heap)
+    "delete_min non-empty"
+    (T (2, T (3, E, lazy E), lazy E))
+    (delete_min (T (1, T (2, T (3, E, lazy E), lazy E), lazy E)))
+;;
+
+let test_merge_lazy_pairing_heap () =
+  let open IntLazyPairingHeap in
+  Alcotest.(check lazy_pairing_heap) "merge empty & empty" empty (merge empty empty);
+  Alcotest.(check lazy_pairing_heap)
+    "merge empty & non-empty"
+    (T (1, E, lazy E))
+    (merge empty (T (1, E, lazy E)));
+  Alcotest.(check lazy_pairing_heap)
+    "merge non-empty & non-empty"
+    (T (1, T (2, E, lazy E), lazy E))
+    (merge (T (1, E, lazy E)) (T (2, E, lazy E)));
+  Alcotest.(check lazy_pairing_heap)
+    "merge even non-empty & uneven non-empty"
+    (T (1, E, lazy (T (2, T (3, E, lazy (T (4, T (5, E, lazy E), lazy E))), lazy E))))
+    (merge
+       (T (1, T (2, E, lazy E), lazy E))
+       (T (3, E, lazy (T (4, T (5, E, lazy E), lazy E)))))
+;;
+
 let suite =
   [ "LeftistHeap.merge", `Quick, test_merge
   ; "LeftistHeap.insert", `Quick, test_insert
@@ -421,5 +514,9 @@ let suite =
   ; "LazyBinomialHeap.is_empty", `Quick, test_is_empty_lazy_binomial
   ; "LazyBinomialHeap.insert", `Quick, test_insert_lazy_binomial
   ; "LazyBinomialHeap.find_min", `Quick, test_find_min_lazy_binomial
+  ; "LazyPairingHeap.insert", `Quick, test_insert_lazy_pairing_heap
+  ; "LazyPairingHeap.find_min", `Quick, test_find_min_lazy_pairing_heap
+  ; "LazyPairingHeap.delet_min", `Quick, test_delete_min_lazy_pairing_heap
+  ; "LazyPairingHeap.merge", `Quick, test_merge_lazy_pairing_heap
   ]
 ;;

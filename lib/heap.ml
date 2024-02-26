@@ -314,7 +314,8 @@ module PairingHeap (Elem : Ord.Ord) : sig
 end = struct
   type e = Elem.t
 
-  (** Only well-formed heaps are allowed, so E will never appears in a child list of a T node. *)
+  (** Only well-formed heaps are allowed, so E will never appears in a child list of a T node.
+      The root of a parent node is always smaller than the root of a child. *)
   type t =
     | E
     | T of e * t list
@@ -462,5 +463,68 @@ end = struct
   let delete_min (lazy ts) =
     let Node (_, _, c1), c2 = remove_min_heap ts in
     lazy (mrg (List.rev c1) c2)
+  ;;
+end
+
+(** Lazy version of the PairingHeap that aim to improve the performance in the persistent use-case.
+    It's not as fast the non-lazy PairingHeap, due to the overhead of the lazy evaluation but.
+    It excels int heavy persistent use cases. *)
+module LazyPairingHeap (Elem : Ord.Ord) : sig
+  type e = Elem.t
+
+  type t =
+    | E
+    | T of e * t * t Stdlib.Lazy.t
+
+  include Heap with type e := e and type t := t
+end = struct
+  type e = Elem.t
+
+  (** The lazy version consists of the root element, a note that can hold a partnerless child node
+      that is only use in case the child node count is uneven.
+      Hence the field is named the 'odd field'.
+      The last field holds a suspended heap node containing the children. *)
+  type t =
+    | E
+    | T of e * t * t Stdlib.Lazy.t
+
+  let empty = E
+
+  let is_empty = function
+    | E -> true
+    | _ -> false
+  ;;
+
+  (** Find the minimal element in the heap.
+      As the heap is pre-ordered this has a complexity of O(1). *)
+  let find_min = function
+    | E -> failwith "empty"
+    | T (x, _, _) -> x
+  ;;
+
+  (** Merges two heaps.
+      Determines the smaller root, than adds the heap with the bigger root as a child to the heap with the smaller root.
+      If the 'odd field' is empty add place the new child into this field.
+      Otherwise the new child is paired with the 'old field' and add the result to the suspension.
+      After this the 'odd field' will be empty again. *)
+  let rec merge t1 t2 =
+    let link t a =
+      match t, a with
+      | E, _ -> failwith "empty"
+      | T (x, E, m), a -> T (x, a, m)
+      | T (x, b, m), a -> T (x, E, lazy (merge (merge a b) (Stdlib.Lazy.force m)))
+    in
+    match t1, t2 with
+    | E, t | t, E -> t
+    | T (x, _, _), T (y, _, _) when x <= y -> link t1 t2
+    (* x > y *)
+    | t1, t2 -> link t2 t1
+  ;;
+
+  let insert x t = merge (T (x, E, lazy E)) t
+
+  let delete_min = function
+    | E -> failwith "empty"
+    | T (_, a, (lazy b)) -> merge a b
   ;;
 end
