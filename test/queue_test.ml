@@ -59,7 +59,7 @@ let test_tail () =
 
 open Ads_ocaml.Stream
 
-module StreamTest = struct
+module TestStream = struct
   let rec pp fmt = function
     | Stream.Nil -> Format.fprintf fmt "Nil"
     | Stream.Cons (lazy (x, s)) ->
@@ -75,11 +75,11 @@ module StreamTest = struct
   ;;
 end
 
-module StreamQueueTest = struct
+module TestStreamQueue = struct
   let pp fmt = function
     | _, Stream.Nil, _, _ -> Format.fprintf fmt "(0, Nil, 0, Nil)"
     | len_f, f, len_r, r ->
-      Format.fprintf fmt "(%d, %a, %d, %a)" len_f StreamTest.pp f len_r StreamTest.pp r
+      Format.fprintf fmt "(%d, %a, %d, %a)" len_f TestStream.pp f len_r TestStream.pp r
   ;;
 
   let equal t1 t2 =
@@ -89,12 +89,12 @@ module StreamQueueTest = struct
     | (len_f1, f1, len_r1, r1), (len_f2, f2, len_r2, r2) ->
       len_f1 = len_f2
       && len_r1 = len_r2
-      && StreamTest.equal f1 f2
-      && StreamTest.equal r1 r2
+      && TestStream.equal f1 f2
+      && TestStream.equal r1 r2
   ;;
 end
 
-let stream_queue = Alcotest.testable StreamQueueTest.pp StreamQueueTest.equal
+let stream_queue = Alcotest.testable TestStreamQueue.pp TestStreamQueue.equal
 
 let test_snoc_stream () =
   let open Stream in
@@ -137,6 +137,84 @@ let test_tail_stream () =
     (tail (1, Cons (lazy (1, Nil)), 1, Cons (lazy (2, Nil))))
 ;;
 
+module TestRealTimeQueue = struct
+  include RealTimeQueue
+
+  let pp fmt ((f, r, s) : int t) =
+    Format.fprintf
+      fmt
+      "(%a, %a, %a)"
+      TestStream.pp
+      f
+      Fmt.(brackets (list ~sep:semi int))
+      r
+      TestStream.pp
+      s
+  ;;
+
+  let equal (t1 : int t) (t2 : int t) : bool =
+    match t1, t2 with
+    | (Stream.Nil, _, _), (Stream.Nil, _, _) -> true
+    | (f1, r1, s1), (f2, r2, s2) ->
+      TestStream.equal f1 f2 && List.equal ( = ) r1 r2 && TestStream.equal s1 s2
+  ;;
+end
+
+let realtime_queue = Alcotest.testable TestRealTimeQueue.pp TestRealTimeQueue.equal
+
+let test_snoc_realtime () =
+  let open RealTimeQueue in
+  Alcotest.check
+    realtime_queue
+    "snoc empty"
+    (Cons (lazy (1, Nil)), [], Cons (lazy (1, Nil)))
+    (snoc 1 empty);
+  Alcotest.check
+    realtime_queue
+    "snoc non-empty"
+    (Cons (lazy (1, Nil)), [ 2 ], Nil)
+    (snoc 1 empty |> snoc 2);
+  Alcotest.check
+    realtime_queue
+    "snoc uneven non-empty"
+    ( Cons (lazy (3, Cons (lazy (2, Cons (lazy (1, Nil))))))
+    , []
+    , Cons (lazy (3, Cons (lazy (2, Cons (lazy (1, Nil)))))) )
+    (snoc 3 empty |> snoc 2 |> snoc 1);
+  Alcotest.check
+    realtime_queue
+    "snoc even non-empty"
+    ( Cons (lazy (3, Cons (lazy (2, Cons (lazy (1, Nil))))))
+    , [ 4 ]
+    , Cons (lazy (2, Cons (lazy (1, Nil)))) )
+    (snoc 3 empty |> snoc 2 |> snoc 1 |> snoc 4)
+;;
+
+let test_head_realtime () =
+  let open RealTimeQueue in
+  Alcotest.(check (option int)) "head empty" None (head empty);
+  Alcotest.(check (option int))
+    "head non-empty"
+    (Some 1)
+    (head (Cons (lazy (1, Nil)), [], Cons (lazy (1, Nil))))
+;;
+
+let test_tail_realtime () =
+  let open RealTimeQueue in
+  Alcotest.(check (option realtime_queue)) "tail empty" None (tail empty);
+  Alcotest.(check (option realtime_queue))
+    "tail non-empty"
+    (Some (Nil, [], Nil))
+    (tail (Cons (lazy (1, Nil)), [], Cons (lazy (1, Nil))));
+  Alcotest.(check (option realtime_queue))
+    "tail non-empty"
+    (Some (Cons (lazy (2, Cons (lazy (1, Nil)))), [ 4 ], Cons (lazy (1, Nil))))
+    (tail
+       ( Cons (lazy (3, Cons (lazy (2, Cons (lazy (1, Nil))))))
+       , [ 4 ]
+       , Cons (lazy (2, Cons (lazy (1, Nil)))) ))
+;;
+
 let suite =
   [ "Dequeue.cons", `Quick, test_cons
   ; "Dequeue.snoc", `Quick, test_snoc
@@ -145,5 +223,8 @@ let suite =
   ; "StreamQueue.snoc", `Quick, test_snoc_stream
   ; "StreamQueue.head", `Quick, test_head_stream
   ; "StreamQueue.tail", `Quick, test_tail_stream
+  ; "RealTimeQueue.snoc", `Quick, test_snoc_realtime
+  ; "RealTimeQueue.head", `Quick, test_head_realtime
+  ; "RealTimeQueue.tail", `Quick, test_tail_realtime
   ]
 ;;

@@ -4,8 +4,9 @@ module type Queue = sig
   val empty : 'a t
   val is_empty : 'a t -> bool
 
-  (* cons backwards to cons, append on the right *)
+  (** cons backwards, appends on the right *)
   val snoc : 'a -> 'a t -> 'a t
+
   val head : 'a t -> 'a option
   val head_exn : 'a t -> 'a
   val tail : 'a t -> 'a t option
@@ -232,4 +233,75 @@ end = struct
   ;;
 
   let tail_exn t = tail t |> Option.get
+end
+
+(** Aims to turn the amortized performance of the LazyQueue into worst-case performance.
+    All operation should run in O(1) worst-case. *)
+module RealTimeQueue : sig
+  open Stream
+
+  (** The suffixed Stream.t functions as a pointer to the last evaluated suspension
+      and will we used as a schedule for forcing evaluation.
+      So forcing the suffixed Stream.t will evaluate the next suspension.
+      The front of the list is 'a Stream.
+      The rear is 'a list. *)
+  type 'a t = 'a Stream.t * 'a list * 'a Stream.t
+
+  include Queue with type 'a t := 'a t
+end = struct
+  open Stream
+
+  type 'a t = 'a Stream.t * 'a list * 'a Stream.t
+
+  let empty = Stream.Nil, [], Stream.Nil
+
+  let is_empty = function
+    | Stream.Nil, _, _ -> true
+    | _ -> false
+  ;;
+
+  (** Used to establish the invariant |f| >= |r| by appending the rear queue to the front. *)
+  let rec rotate = function
+    | Stream.Nil, y :: _, a -> Stream.Cons (lazy (y, a)) |> fun x -> Option.Some x
+    | Stream.Cons (lazy (x, xs)), y :: ys, a ->
+      let f = rotate (xs, ys, Stream.Cons (lazy (y, a))) in
+      Option.map (fun f -> Stream.Cons (lazy (x, f))) f
+    | Stream.Nil, [], _ -> Option.None
+    | Stream.Cons _, [], _ -> Option.None
+  ;;
+
+  (** Execute the next suspension in the schedule.
+      Maintains |s| = |f| - |r|, as |s| cannot be negative |f| >= |r| is guaranteed.
+      Snoc increases the rear and tail decreases the front.
+      Calling exec results in |s| = |f| - |r| + 1.
+      If s is not empty just take the tail of s.
+      In case s is empty the rear must be longer longer than the front, due to 0 = |f| - |r| + 1,
+      and a rotation is required to maintain the invariant.
+      Pattern matching force the evaluation here. *)
+  let exec = function
+    | f, r, Stream.Cons (lazy (_, s)) -> (f, r, s) |> fun x -> Option.Some x
+    | (_, _, Stream.Nil) as t -> rotate t |> Option.map (fun f' -> f', [], f')
+  ;;
+
+  (** Appends the given element to the back of the queue. *)
+  let snoc x (f, r, s) = exec (f, x :: r, s) |> Option.get
+
+  (** Returns the head of the queue. *)
+  let head t =
+    match t with
+    | Stream.Cons (lazy (x, _)), _, _ -> Option.Some x
+    | Stream.Nil, _, _ -> Option.None
+  ;;
+
+  (** Returns the head of the queue, throws if empty. *)
+  let head_exn t = head t |> Option.get
+
+  (** Returns the tail of the queue. *)
+  let tail = function
+    | Stream.Nil, _, _ -> None
+    | Stream.Cons (lazy (_, f)), r, s -> exec (f, r, s)
+  ;;
+
+  (** Returns the tail of the queue, throws if empty. *)
+  let tail_exn (Stream.Cons (lazy (_, f)), r, s) = exec (f, r, s) |> Option.get
 end

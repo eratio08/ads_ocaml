@@ -10,7 +10,7 @@ end
 module Stream : sig
   type 'a t =
     | Nil
-    | Cons of ('a * 'a t) Stdlib.Lazy.t
+    | Cons of ('a * 'a t) Stdlib.Lazy.t 
 
   include Stream with type 'a t := 'a t
 end = struct
